@@ -1,0 +1,11 @@
+/* Hover personalizado para los links del navbar */
+.nav-link {
+  color: #ffffff; /* color base */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: #343a40; /* gris oscuro al pasar el mouse */
+  color: #ffc107; /* amarillo Bootstrap (warning) */
+  border-radius: 4px; /* opcional, esquinas redondeadas */
+}

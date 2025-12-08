@@ -1,0 +1,33 @@
+/* Estilos para el efecto Hover en los botones de Carrito */
+
+/* Botón Finalizar Compra (verde) */
+.btn-success {
+    /* Define el color de fondo base de Bootstrap */
+    background-color: #198754; 
+    border-color: #198754;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-success:hover {
+    /* Color más oscuro al hacer hover */
+    background-color: #157347; 
+    border-color: #146c43;
+    /* Asegura que el texto siga siendo blanco */
+    color: #fff; 
+}
+
+/* Botón Vaciar Carrito (rojo) */
+.btn-danger {
+    /* Define el color de fondo base de Bootstrap */
+    background-color: #dc3545; 
+    border-color: #dc3545;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-danger:hover {
+    /* Color más oscuro al hacer hover */
+    background-color: #bb2d3b; 
+    border-color: #b02a37;
+    /* Asegura que el texto siga siendo blanco */
+    color: #fff; 
+}
