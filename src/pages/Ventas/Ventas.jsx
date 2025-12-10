@@ -36,7 +36,6 @@ export default function Ventas() {
 
     // FUNCIÓN PARA ABRIR EL MODAL
     const handleOpenModal = (venta) => {
-        // La API de Django ya trae los detalles en 'detalles' y 'pagos'
         setSelectedVenta(venta);
         setIsModalOpen(true);
     };
@@ -164,6 +163,11 @@ function DetalleVentaModal({ venta, onClose, formatCurrency }) {
         day: '2-digit', month: '2-digit', year: 'numeric', 
         hour: '2-digit', minute: '2-digit' 
     });
+    
+    // Preparación de datos del cliente (Adaptación aquí)
+    const clienteNombreDisplay = venta.cliente_nombre || 'Consumidor Final';
+    const clienteRutDisplay = venta.cliente_rut; // Asumimos que el backend puede enviar este campo
+    const clienteEmailDisplay = venta.cliente_email; // O este
 
     return (
         // Estructura básica de un modal Bootstrap. 
@@ -184,10 +188,21 @@ function DetalleVentaModal({ venta, onClose, formatCurrency }) {
                         
                         <div className="row mb-4">
                             <div className="col-md-6">
-                                <h4>Información General</h4>
+                                <h4>Información General y Cliente</h4>
                                 <ul className="list-unstyled">
                                     <li><strong>Fecha/Hora:</strong> {fechaHora}</li>
-                                    <li><strong>Cliente:</strong> {venta.cliente_nombre || 'Consumidor Final'}</li>
+                                    
+                                    {/* --- AQUÍ LA ADAPTACIÓN --- */}
+                                    <li className="fw-bold mt-2">Cliente: {clienteNombreDisplay}</li>
+                                    
+                                    {clienteRutDisplay && (
+                                        <li><strong>RUT:</strong> {clienteRutDisplay}</li>
+                                    )}
+                                    {clienteEmailDisplay && (
+                                        <li><strong>Email:</strong> {clienteEmailDisplay}</li>
+                                    )}
+                                    {/* ------------------------- */}
+                                    
                                     <li><strong>Vendedor:</strong> {venta.vendedor_nombre || 'N/A'}</li>
                                     <li><strong>Canal:</strong> {venta.canal_venta === 'pos' ? 'Punto de Venta' : 'E-commerce'}</li>
                                 </ul>
@@ -220,6 +235,7 @@ function DetalleVentaModal({ venta, onClose, formatCurrency }) {
                         <hr />
 
                         <h4 className="mt-4 mb-3">Productos Vendidos ({productosVendidos.length})</h4>
+                        {/* ... (Contenido de Productos Vendidos se mantiene igual) ... */}
                         {productosVendidos.length > 0 ? (
                             <div className="table-responsive">
                                 <table className="table table-bordered table-striped table-sm">
@@ -252,6 +268,7 @@ function DetalleVentaModal({ venta, onClose, formatCurrency }) {
                         <hr />
 
                         <h4 className="mt-4">Pagos Registrados ({pagosRegistrados.length})</h4>
+                        {/* ... (Contenido de Pagos Registrados se mantiene igual) ... */}
                         {pagosRegistrados.length > 0 ? (
                             <ul className="list-group list-group-flush">
                                 {pagosRegistrados.map((pago, index) => (
