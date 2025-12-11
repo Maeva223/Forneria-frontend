@@ -1,24 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import client from "../../api/client";
 import Loader from "../../components/UI/Loader";
-import Pagination from "../../components/UI/Pagination"; // Asegúrate de que este componente exista
+import Pagination from "../../components/UI/Pagination";
 import Badge from "../../components/UI/Badge";
 import { Link } from "react-router-dom";
 
 export default function ClientesList() {
-  // Estado para la autenticación
   const [authToken] = useState(() => localStorage.getItem("access") || null);
 
-  // Estado principal de la lista
+  // Estados principales
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Estado para los filtros controlados por el usuario (UI)
+  // Filtros
   const [filters, setFilters] = useState({ rut: "", nombre: "" });
-  // Estado de los filtros actualmente aplicados (usados en la API/useEffect)
   const [appliedFilters, setAppliedFilters] = useState({ rut: "", nombre: "" });
 
   // Cliente seleccionado y sus compras
@@ -27,24 +25,20 @@ export default function ClientesList() {
   const [loadingCompras, setLoadingCompras] = useState(false);
   const [errorCompras, setErrorCompras] = useState(null);
 
-  /**
-   * Carga la lista de clientes desde la API, aplicando paginación y filtros.
-   * La corrección incluye la autenticación.
-   */
+  // Modal Boleta
+  const [selectedVentaBoleta, setSelectedVentaBoleta] = useState(null);
+  const [loadingBoleta, setLoadingBoleta] = useState(false);
+
+  // --- CARGAR CLIENTES ---
   const loadClientes = useCallback(async () => {
     if (!authToken) {
-      setError({ message: "No autenticado. Por favor, inicia sesión." });
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
-    setSelectedCliente(null); // Limpiar cliente seleccionado al cambiar de página/filtros
-
     try {
       const config = { headers: { Authorization: `Bearer ${authToken}` } };
-      
       const { data } = await client.get("/pos/api/clientes/", {
         ...config,
         params: {
@@ -54,160 +48,171 @@ export default function ClientesList() {
         },
       });
 
-      // Se asume que la API de DRF (Django Rest Framework) devuelve:
-      // { count: N, next: URL, previous: URL, results: [...clientes], total_pages: M }
-      setClientes(data.results || data); 
-      setTotalPages(data.total_pages || 1); 
-
-    } catch (err) {
-      console.error("Error cargando clientes:", err.response?.data || err.message);
-      if (err.response && err.response.status === 401) {
-         setError({ message: "No autorizado. Su sesión pudo haber expirado (401)." });
+      if (Array.isArray(data)) {
+         setClientes(data);
+         setTotalPages(1);
       } else {
-         setError(err);
+         setClientes(data.results || []); 
+         setTotalPages(data.total_pages || 1); 
       }
+    } catch (err) {
+      console.error(err);
+      setError({ message: "Error al cargar clientes." });
     } finally {
       setLoading(false);
     }
-  }, [authToken, page, appliedFilters]); // Dependencias: token, página, filtros aplicados
+  }, [authToken, page, appliedFilters]);
 
-  // Dispara la carga de clientes cuando cambia la página o los filtros aplicados.
   useEffect(() => {
     loadClientes();
-    // NOTA: El filtrado ahora se hace en el backend, por eso useMemo ya no es necesario para filtrar.
   }, [loadClientes]);
 
-  // Aplica los filtros controlados, establece la página a 1 y dispara loadClientes.
+  // --- FILTROS ---
   function applyFilters() {
-    // Solo actualiza los filtros aplicados si hay cambios, para evitar un re-render innecesario.
     if (filters.rut !== appliedFilters.rut || filters.nombre !== appliedFilters.nombre) {
         setAppliedFilters({ ...filters });
-        setPage(1); // Siempre resetear a la página 1 al aplicar nuevos filtros
+        setPage(1);
+        setSelectedCliente(null);
     }
   }
 
-  // Limpia los filtros y establece la página a 1.
   function clearFilters() {
     setFilters({ rut: "", nombre: "" });
     setAppliedFilters({ rut: "", nombre: "" });
     setPage(1);
   }
 
-  /**
-   * Carga las compras para un cliente específico (por RUT o ID).
-   * La corrección incluye la autenticación.
-   */
+  // --- CARGAR HISTORIAL ---
   const loadCompras = useCallback(async (rut) => {
     if (!authToken) return;
-
     setLoadingCompras(true);
     setErrorCompras(null);
     setCompras([]);
-    
     try {
       const config = { headers: { Authorization: `Bearer ${authToken}` } };
-      // Se mantiene el endpoint original, asumiendo que el backend maneja el token.
       const { data } = await client.get(`/pos/api/clientes/${rut}/`, config); 
-      setCompras(data.ventas || data.compras || []); // Ajustar si el campo es 'compras'
+      
+      const lista = data.ventas || data.compras || [];
+      setCompras(Array.isArray(lista) ? lista : lista.results || []);
     } catch (err) {
-      console.error("Error cargando compras:", err.response?.data || err.message);
-      setErrorCompras("Error al cargar las compras del cliente.");
-      setCompras([]);
+      console.error(err);
+      setErrorCompras("Error cargando historial.");
     } finally {
       setLoadingCompras(false);
     }
   }, [authToken]);
 
-  // Maneja la selección de un cliente y carga sus compras.
   function handleSelectCliente(cliente) {
-    // Si se hace clic en el cliente ya seleccionado, se limpia el detalle
     if (selectedCliente && selectedCliente.id === cliente.id) {
         setSelectedCliente(null);
         setCompras([]);
-        setErrorCompras(null);
     } else {
         setSelectedCliente(cliente);
         loadCompras(cliente.rut);
     }
   }
-  
-  // No necesitamos 'columns' ya que estamos usando una tabla HTML simple con onClick en <tr>
 
-  if (!authToken) {
-      return (
-          <div className="container-fluid py-4">
-              <div className="alert alert-danger">
-                  **Acceso denegado.** No se encontró el token de autenticación.
-              </div>
-          </div>
-      );
-  }
+  // --- MODAL BOLETA ---
+  const openBoletaModal = async (ventaId) => {
+    setLoadingBoleta(true);
+    try {
+        const config = { headers: { Authorization: `Bearer ${authToken}` } };
+        const { data } = await client.get(`/pos/api/ventas/${ventaId}/`, config);
+        setSelectedVentaBoleta(data);
+    } catch (error) {
+        console.error("Error modal:", error);
+    } finally {
+        setLoadingBoleta(false);
+    }
+  };
+
+  if (!authToken) return <div className="alert alert-danger m-4">No autenticado.</div>;
 
   return (
     <div className="container-fluid py-4">
-      <h2>Clientes</h2>
-      <p>Listado de clientes registrados en el sistema.</p>
+      {/* MODAL (Recibo Térmico) */}
+      {selectedVentaBoleta && (
+        <div className="modal fade show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }} tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div className="modal-content shadow">
+              <div className="modal-header bg-light">
+                <h5 className="modal-title">🧾 Detalle Venta</h5>
+                <button type="button" className="btn-close" onClick={() => setSelectedVentaBoleta(null)}></button>
+              </div>
+              <div className="modal-body font-monospace small">
+                <div className="text-center mb-3">
+                    <h5 className="fw-bold mb-0">MI NEGOCIO</h5>
+                    <p className="mb-0 text-muted">Folio: {selectedVentaBoleta.folio_documento}</p>
+                    <p>{new Date(selectedVentaBoleta.fecha).toLocaleString("es-CL")}</p>
+                </div>
+                <hr className="border-secondary border-dashed" />
+                <div className="mb-2">
+                    <div><strong>Cliente:</strong> {selectedVentaBoleta.cliente_nombre}</div>
+                    <div><strong>Vendedor:</strong> {selectedVentaBoleta.vendedor_nombre}</div>
+                </div>
+                <table className="table table-sm table-borderless mb-0">
+                    <thead><tr className="border-bottom border-dark"><th>Item</th><th className="text-center">Cnt</th><th className="text-end">Total</th></tr></thead>
+                    <tbody>
+                        {selectedVentaBoleta.detalles?.map((item, idx) => (
+                            <tr key={idx}>
+                                <td>{item.producto_nombre}</td>
+                                <td className="text-center">{item.cantidad}</td>
+                                <td className="text-end">${parseFloat(item.subtotal).toLocaleString("es-CL")}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <hr className="border-secondary border-dashed" />
+                <div className="d-flex justify-content-between fw-bold fs-5">
+                    <span>TOTAL:</span>
+                    <span>${parseFloat(selectedVentaBoleta.total).toLocaleString("es-CL")}</span>
+                </div>
+                {/* Pagos */}
+                {selectedVentaBoleta.pagos?.length > 0 && (
+                     <div className="mt-3 bg-light p-2 rounded">
+                        <small className="fw-bold">Pagos:</small>
+                        {selectedVentaBoleta.pagos.map((p, i) => (
+                            <div key={i} className="d-flex justify-content-between">
+                                <span>{p.metodo}</span><span>${parseFloat(p.monto).toLocaleString("es-CL")}</span>
+                            </div>
+                        ))}
+                        <div className="d-flex justify-content-between border-top border-secondary mt-1 pt-1">
+                            <span>Vuelto:</span><span>${parseFloat(selectedVentaBoleta.pagos[0]?.vuelto || 0).toLocaleString("es-CL")}</span>
+                        </div>
+                     </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setSelectedVentaBoleta(null)}>Cerrar</button>
+                <button className="btn btn-primary" onClick={() => window.print()}>Imprimir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="row g-4"> {/* g-4 para espacio entre columnas */}
-        {/* ========================================================================= */}
-        {/* COLUMNA IZQUIERDA: BÚSQUEDA Y LISTADO DE CLIENTES */}
-        {/* ========================================================================= */}
+      <h2>Clientes</h2>
+      <p>Gestión de clientes y revisión de historial.</p>
+
+      <div className="row g-4">
+        {/* === COLUMNA IZQUIERDA: LISTA === */}
         <div className="col-lg-7">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-primary text-white">
-              <h5 className="mb-0">Búsqueda y Listado</h5>
+              <h5 className="mb-0">Listado</h5>
             </div>
             <div className="card-body d-flex flex-column">
               {/* Filtros */}
               <div className="row g-2 mb-3 border-bottom pb-3">
-                <div className="col-12">
-                  <input
-                    className="form-control form-control-sm"
-                    placeholder="Filtrar por RUT"
-                    value={filters.rut}
-                    onChange={(e) => setFilters((f) => ({ ...f, rut: e.target.value }))}
-                    disabled={loading}
-                  />
-                </div>
-                <div className="col-12">
-                  <input
-                    className="form-control form-control-sm"
-                    placeholder="Filtrar por Nombre"
-                    value={filters.nombre}
-                    onChange={(e) => setFilters((f) => ({ ...f, nombre: e.target.value }))}
-                    disabled={loading}
-                  />
-                </div>
+                <div className="col-6"><input className="form-control form-control-sm" placeholder="RUT" value={filters.rut} onChange={(e) => setFilters(f => ({ ...f, rut: e.target.value }))} /></div>
+                <div className="col-6"><input className="form-control form-control-sm" placeholder="Nombre" value={filters.nombre} onChange={(e) => setFilters(f => ({ ...f, nombre: e.target.value }))} /></div>
                 <div className="col-12 d-flex gap-2">
-                  <button 
-                    className="btn btn-primary btn-sm flex-grow-1" 
-                    onClick={applyFilters}
-                    disabled={loading}
-                  >
-                    Filtrar
-                  </button>
-                  <button 
-                    className="btn btn-secondary btn-sm flex-grow-1" 
-                    onClick={clearFilters}
-                    disabled={loading}
-                  >
-                    Limpiar
-                  </button>
+                    <button className="btn btn-primary btn-sm flex-grow-1" onClick={applyFilters}>Filtrar</button>
+                    <button className="btn btn-secondary btn-sm flex-grow-1" onClick={clearFilters}>Limpiar</button>
                 </div>
               </div>
-
-              {/* Contenido principal (Tabla de clientes) */}
-              {loading ? (
-                <Loader />
-              ) : error ? (
-                <div className="alert alert-danger flex-grow-1 d-flex align-items-center justify-content-center">
-                    **Error:** {error.message || "Error cargando clientes."}
-                </div>
-              ) : clientes.length === 0 ? (
-                <div className="alert alert-info flex-grow-1 d-flex align-items-center justify-content-center">
-                    No hay clientes que coincidan con los filtros.
-                </div>
-              ) : (
+              {/* Tabla */}
+              {loading ? <Loader /> : error ? <div className="alert alert-danger">{error.message}</div> : (
                 <>
                   <div className="table-responsive flex-grow-1">
                     <table className="table table-striped table-hover table-sm">
@@ -215,38 +220,26 @@ export default function ClientesList() {
                         <tr>
                           <th>RUT</th>
                           <th>Nombre</th>
-                          <th>Correo</th>
+                          <th className="text-center">Compras</th> {/* NUEVA COLUMNA */}
                         </tr>
                       </thead>
                       <tbody>
-                        {clientes.map((cliente) => (
-                          <tr 
-                            key={cliente.id} 
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleSelectCliente(cliente)}
-                            className={selectedCliente?.id === cliente.id ? "table-primary fw-bold" : ""}
-                          >
-                            <td>{cliente.rut}</td>
-                            <td className="text-primary">{cliente.nombre}</td>
-                            <td>{cliente.correo || "-"}</td>
+                        {clientes.map((c) => (
+                          <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => handleSelectCliente(c)} className={selectedCliente?.id === c.id ? "table-primary fw-bold" : ""}>
+                            <td>{c.rut}</td>
+                            <td className="text-primary">{c.nombre}</td>
+                            {/* Mostrar total_compras del backend */}
+                            <td className="text-center">
+                                <span className="badge bg-secondary rounded-pill">{c.total_compras || 0}</span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-
-                  {/* Paginación y Contador */}
-                  <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                    <Badge
-                      text={`${clientes.length} de N total`} // El total se puede obtener de 'data.count'
-                      variant="info"
-                    />
-                    <Pagination 
-                        page={page}
-                        totalPages={totalPages}
-                        setPage={setPage}
-                        isProcessing={loading}
-                    />
+                  <div className="d-flex justify-content-between mt-3 pt-2 border-top">
+                    <Badge text={`${clientes.length} resultados`} variant="info" />
+                    <Pagination page={page} totalPages={totalPages} setPage={setPage} />
                   </div>
                 </>
               )}
@@ -254,111 +247,71 @@ export default function ClientesList() {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* COLUMNA DERECHA: DETALLES Y COMPRAS DEL CLIENTE SELECCIONADO */}
-        {/* ========================================================================= */}
+        {/* === COLUMNA DERECHA: DETALLE === */}
         <div className="col-lg-5">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-success text-white">
-              <h5 className="mb-0">
-                Detalles {selectedCliente ? `de ${selectedCliente.nombre}` : "del Cliente"}
-              </h5>
+              <h5 className="mb-0">Historial {selectedCliente ? `- ${selectedCliente.nombre}` : ""}</h5>
             </div>
             <div className="card-body">
               {!selectedCliente ? (
-                <div className="alert alert-secondary text-center py-5 h-100 d-flex align-items-center justify-content-center">
-                  <p className="lead mb-0">
-                    <i className="bi bi-arrow-left me-2"></i> Selecciona un cliente de la lista de la izquierda para ver su historial.
-                  </p>
-                </div>
+                <div className="alert alert-secondary text-center py-5">Selecciona un cliente.</div>
               ) : (
                 <>
-                  {/* --- Información del Cliente --- */}
-                  <div className="mb-4 pb-3 border-bottom">
-                    <h6 className="fw-bold text-success">Información de Contacto 📞</h6>
+                  <div className="mb-3 border-bottom pb-3">
+                    <h6 className="fw-bold text-success">Datos</h6>
                     <ul className="list-group list-group-flush small">
-                      <li className="list-group-item px-0"><strong>Nombre:</strong> {selectedCliente.nombre}</li>
-                      <li className="list-group-item px-0"><strong>RUT:</strong> {selectedCliente.rut}</li>
-                      <li className="list-group-item px-0"><strong>Correo:</strong> {selectedCliente.correo || "-"}</li>
-                      <li className="list-group-item px-0">
-                        {/* Ejemplo de enlace a edición si existe */}
-                        <Link to={`/clientes/editar/${selectedCliente.id}`} className="btn btn-sm btn-outline-primary mt-2">
-                            Ver o Editar Ficha
-                        </Link>
-                      </li>
+                        <li className="list-group-item px-0 py-1"><strong>RUT:</strong> {selectedCliente.rut}</li>
+                        <li className="list-group-item px-0 py-1"><strong>Correo:</strong> {selectedCliente.correo || "-"}</li>
+                        <li className="list-group-item px-0 py-1"><Link to={`/clientes/${selectedCliente.rut}`} className="btn btn-sm btn-outline-primary mt-1 w-100">Ver Ficha Completa</Link></li>
                     </ul>
                   </div>
 
-                  {/* --- Historial de Compras --- */}
-                  <h6 className="fw-bold text-success mb-3">Historial de Compras 🛒</h6>
-                  
-                  {loadingCompras ? (
-                    <Loader />
-                  ) : errorCompras ? (
-                    <div className="alert alert-danger">{errorCompras}</div>
-                  ) : compras.length === 0 ? (
-                    <div className="alert alert-info">Sin compras registradas para este cliente.</div>
-                  ) : (
+                  <h6 className="fw-bold text-success mb-2">Compras Recientes</h6>
+                  {loadingCompras ? <Loader /> : compras.length === 0 ? <div className="alert alert-info">Sin historial.</div> : (
                     <div className="accordion accordion-flush" id="accordionCompras">
-                      {compras.map((venta, index) => (
+                      {compras.map((venta) => (
                         <div className="accordion-item" key={venta.id}>
-                          <h2 className="accordion-header" id={`heading${venta.id}`}>
-                            <button
-                              className="accordion-button collapsed py-2"
-                              type="button"
-                              data-bs-toggle="collapse"
-                              data-bs-target={`#collapse${venta.id}`}
-                              aria-expanded="false"
-                              aria-controls={`collapse${venta.id}`}
-                            >
+                          <h2 className="accordion-header" id={`h${venta.id}`}>
+                            <button className="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target={`#c${venta.id}`}>
                               <div className="d-flex justify-content-between w-100 pe-3 small">
-                                <span>
-                                  <i className="bi bi-file-text me-1"></i>
-                                  **{venta.folio_documento || `#${venta.id}`}** - {new Date(venta.fecha).toLocaleDateString("es-CL")}
-                                </span>
-                                <span>
-                                  **${parseFloat(venta.total).toLocaleString("es-CL")}**
-                                  <span className={`badge bg-${venta.estado === "entregado" ? "success" : venta.estado === "pagado" ? "info" : "warning"} ms-2`}>
-                                    {venta.estado}
-                                  </span>
-                                </span>
+                                <span>#{venta.folio_documento || venta.id} <span className="text-muted ms-1">({new Date(venta.fecha).toLocaleDateString("es-CL")})</span></span>
+                                <span className="fw-bold text-success">${parseFloat(venta.total).toLocaleString("es-CL")}</span>
                               </div>
                             </button>
                           </h2>
-                          <div
-                            id={`collapse${venta.id}`}
-                            className="accordion-collapse collapse"
-                            aria-labelledby={`heading${venta.id}`}
-                            data-bs-parent="#accordionCompras"
-                          >
-                            <div className="accordion-body p-3">
-                              <h6 className="small fw-bold">Productos:</h6>
-                              {venta.productos && venta.productos.length > 0 ? (
-                                <div className="table-responsive">
-                                    <table className="table table-sm table-bordered small mb-0">
-                                      <thead>
-                                        <tr>
-                                          <th>Producto</th>
-                                          <th className="text-center">Cant.</th>
-                                          <th className="text-end">Precio Unit.</th>
-                                          <th className="text-end">Subtotal</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {venta.productos.map((prod) => (
-                                          <tr key={prod.id}>
-                                            <td>{prod.nombre}</td>
-                                            <td className="text-center">{prod.cantidad}</td>
-                                            <td className="text-end">${parseFloat(prod.precio_unitario).toLocaleString("es-CL")}</td>
-                                            <td className="text-end">${parseFloat(prod.subtotal).toLocaleString("es-CL")}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                          <div id={`c${venta.id}`} className="accordion-collapse collapse" data-bs-parent="#accordionCompras">
+                            <div className="accordion-body p-2 bg-light">
+                                {/* LISTA DE PRODUCTOS DENTRO DEL ACORDEÓN */}
+                                <h6 className="small fw-bold text-muted mb-2">Detalle de productos:</h6>
+                                {venta.detalles && venta.detalles.length > 0 ? (
+                                    <div className="table-responsive mb-2">
+                                        <table className="table table-sm table-bordered bg-white small mb-0">
+                                            <thead><tr><th>Prod</th><th className="text-center">Cant</th><th className="text-end">Sub</th></tr></thead>
+                                            <tbody>
+                                                {venta.detalles.map((d, i) => (
+                                                    <tr key={i}>
+                                                        <td>{d.producto_nombre}</td>
+                                                        <td className="text-center">{d.cantidad}</td>
+                                                        <td className="text-end">${parseFloat(d.subtotal).toLocaleString("es-CL")}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="small text-muted fst-italic">Información de productos no disponible en vista rápida.</p>
+                                )}
+                                
+                                <div className="d-grid gap-2 mt-2">
+                                    <button 
+                                        className="btn btn-sm btn-outline-dark"
+                                        onClick={() => openBoletaModal(venta.id)}
+                                        disabled={loadingBoleta}
+                                    >
+                                        <i className="bi bi-receipt"></i> Ver Boleta Completa
+                                    </button>
                                 </div>
-                              ) : (
-                                <p className="text-muted small">No hay productos asociados a este registro.</p>
-                              )}
                             </div>
                           </div>
                         </div>

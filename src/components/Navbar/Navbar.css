@@ -1,11 +1,19 @@
-/* Hover personalizado para los links del navbar */
+/* Links del navbar */
 .nav-link {
-  color: #ffffff; /* color base */
+  color: #ffffff; /* blanco base */
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .nav-link:hover {
   background-color: #343a40; /* gris oscuro al pasar el mouse */
   color: #ffc107; /* amarillo Bootstrap (warning) */
-  border-radius: 4px; /* opcional, esquinas redondeadas */
+  border-radius: 4px;
+}
+
+/* Encabezados de sección dentro del navbar */
+nav h6 {
+  color: #adb5bd; /* gris claro para contraste sobre negro */
+  font-weight: bold;
+  font-size: 0.75rem; /* más pequeño, estilo sección */
+  letter-spacing: 1px; /* separación para que se vea más "menú" */
 }

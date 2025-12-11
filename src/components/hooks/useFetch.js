@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import client from "../api/client";
+import client from "../api/client"; // Importa el cliente CON interceptores
 
-export function useFetch(url, options = {}) {
+export function useFetch(url, params = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,8 +9,10 @@ export function useFetch(url, options = {}) {
   useEffect(() => {
     let mounted = true;
     async function fetchData() {
+      setLoading(true);
       try {
-        const res = await client.get(url, options);
+        // Al usar client, el token se va solo
+        const res = await client.get(url, { params });
         if (mounted) setData(res.data);
       } catch (err) {
         if (mounted) setError(err);
@@ -20,7 +22,7 @@ export function useFetch(url, options = {}) {
     }
     fetchData();
     return () => { mounted = false; };
-  }, [url]);
+  }, [url, JSON.stringify(params)]); // Truco: stringify params para detectar cambios en filtros
 
   return { data, loading, error };
 }
