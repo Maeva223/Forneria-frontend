@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import client from "../../api/client";
 import endpoints from "../../api/endpoints";
@@ -10,6 +10,14 @@ export default function LotesPage() {
   const [producto, setProducto] = useState(null);
   const [lotes, setLotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const authToken = useMemo(() => localStorage.getItem("access"), []);
+
+  const authConfig = {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+    },
+  };
 
   // modos: "list" | "form" | "delete"
   const [mode, setMode] = useState("list");
@@ -18,50 +26,97 @@ export default function LotesPage() {
     numero_lote: "",
     fecha_elaboracion: "",
     fecha_caducidad: "",
-    stock_actual: 0,
+    stock_inicial: 0,
   });
 
   async function loadLotes() {
+    if (!authToken) {
+      setError("No estás autenticado.");
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
+    setError(null);
     try {
-      const { data } = await client.get(`/pos/productos/${productoId}/lotes/`);
-      setProducto(data.producto);
-      setLotes(data.lotes);
+      // Obtener el producto primero
+      const { data: productoData } = await client.get(endpoints.productos.detail(productoId), authConfig);
+      setProducto(productoData);
+      
+      // Obtener todos los lotes y filtrar por producto
+      const { data: lotesData } = await client.get(endpoints.lotes.list, authConfig);
+      const lotesFiltrados = (Array.isArray(lotesData) ? lotesData : lotesData.results || [])
+        .filter(lote => lote.producto === parseInt(productoId));
+      setLotes(lotesFiltrados);
     } catch (err) {
-      console.error(err);
+      console.error("Error cargando lotes:", err);
+      setError("Error al cargar los lotes.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadLotes();
+    if (productoId) {
+      loadLotes();
+    }
   }, [productoId]);
 
   async function handleSave(e) {
     e.preventDefault();
+    setError(null);
+    
+    const payload = {
+      numero_lote: form.numero_lote,
+      fecha_elaboracion: form.fecha_elaboracion,
+      fecha_caducidad: form.fecha_caducidad,
+      stock_inicial: parseInt(form.stock_inicial),
+      producto: parseInt(productoId)
+    };
+    
+    console.log("📦 Guardando lote...");
+    console.log("Payload:", payload);
+    
     try {
       if (selectedLote) {
-        await client.put(`/lotes/${selectedLote.id}/`, form);
+        const response = await client.put(endpoints.lotes.update(selectedLote.id), payload, authConfig);
+        console.log("✅ Lote actualizado:", response.data);
       } else {
-        await client.post(`/pos/productos/${productoId}/lotes/`, form);
+        const response = await client.post(endpoints.lotes.create, payload, authConfig);
+        console.log("✅ Lote creado:", response.data);
       }
       setMode("list");
       setSelectedLote(null);
-      loadLotes();
+      setForm({
+        numero_lote: "",
+        fecha_elaboracion: "",
+        fecha_caducidad: "",
+        stock_inicial: 0,
+      });
+      await loadLotes();
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error completo:", err);
+      console.error("Response data:", err.response?.data);
+      console.error("Response status:", err.response?.status);
+      
+      // Mostrar el error completo al usuario
+      const errorMsg = err.response?.data 
+        ? JSON.stringify(err.response.data, null, 2)
+        : err.message || "Error al guardar el lote.";
+      setError(errorMsg);
     }
   }
 
   async function handleDeleteConfirm() {
+    setError(null);
     try {
-      await client.delete(`/lotes/${selectedLote.id}/`);
+      await client.delete(endpoints.lotes.delete(selectedLote.id), authConfig);
       setMode("list");
       setSelectedLote(null);
-      loadLotes();
+      await loadLotes();
     } catch (err) {
-      console.error(err);
+      console.error("Error eliminando lote:", err);
+      setError(err.response?.data?.detail || "Error al eliminar el lote.");
     }
   }
 
@@ -74,19 +129,25 @@ export default function LotesPage() {
       key: "acciones",
       label: "Acciones",
       render: (row) => (
-        <>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
-            className="btn btn-link p-0 me-2"
+            className="btn btn-primary btn-sm"
             onClick={() => {
               setSelectedLote(row);
-              setForm(row);
+              setError(null);
+              setForm({
+                numero_lote: row.numero_lote || "",
+                fecha_elaboracion: row.fecha_elaboracion || "",
+                fecha_caducidad: row.fecha_caducidad || "",
+                stock_inicial: row.stock_actual || 0,
+              });
               setMode("form");
             }}
           >
             Editar
           </button>
           <button
-            className="btn btn-link text-danger p-0"
+            className="btn btn-danger btn-sm"
             onClick={() => {
               setSelectedLote(row);
               setMode("delete");
@@ -94,7 +155,7 @@ export default function LotesPage() {
           >
             Eliminar
           </button>
-        </>
+        </div>
       ),
     },
   ];
@@ -102,6 +163,12 @@ export default function LotesPage() {
   return (
     <div className="container py-4" style={{ maxWidth: "900px" }}>
       <h2>Lotes para {producto?.nombre}</h2>
+      
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
 
       {mode === "list" && (
         <>
@@ -110,11 +177,12 @@ export default function LotesPage() {
               className="btn btn-primary me-2"
               onClick={() => {
                 setSelectedLote(null);
+                setError(null);
                 setForm({
                   numero_lote: "",
                   fecha_elaboracion: "",
                   fecha_caducidad: "",
-                  stock_actual: 0,
+                  stock_inicial: 0,
                 });
                 setMode("form");
               }}
@@ -166,13 +234,13 @@ export default function LotesPage() {
               />
             </div>
             <div className="mb-2">
-              <label className="form-label">Stock actual</label>
+              <label className="form-label">Stock inicial</label>
               <input
                 type="number"
                 className="form-control"
-                value={form.stock_actual}
+                value={form.stock_inicial}
                 onChange={(e) =>
-                  setForm({ ...form, stock_actual: e.target.value })
+                  setForm({ ...form, stock_inicial: parseInt(e.target.value) || 0 })
                 }
               />
             </div>

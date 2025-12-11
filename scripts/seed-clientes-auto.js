@@ -97,8 +97,8 @@ async function obtenerToken() {
   ];
 
   const credenciales = [
-    { username: 'admin', password: 'admin' },
     { username: 'admin', password: 'admin123' },
+    { username: 'admin', password: 'admin' },
     { email: 'admin@admin.com', password: 'admin' }
   ];
 

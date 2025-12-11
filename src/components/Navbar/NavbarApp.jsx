@@ -67,7 +67,6 @@ function NavbarApp() {
                                 <li className="nav-item"><Link className="nav-link text-white" to="/inventario">📋 Inventario</Link></li>
                                 <li className="nav-item"><Link className="nav-link text-white" to="/pedidos">🛒 Pedidos</Link></li>
                                 <li className="nav-item"><Link className="nav-link text-white" to="/clientes">👥 Clientes</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/reportes">📈 Reportes</Link></li>
                                 <li className="nav-item"><Link className="nav-link text-white" to="/configuracion">⚙️ Configuración</Link></li>
                             </>
                         ) : esVendedor ? (

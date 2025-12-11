@@ -85,8 +85,8 @@ async function crearProductosReales() {
     // Autenticarse
     console.log('🔐 Autenticando...');
     const loginRes = await axios.post(`${API_URL}/api/auth/login/`, {
-      username: 'maeva',
-      password: '123'
+      username: 'admin',
+      password: 'admin123'
     });
     
     const token = loginRes.data.access;
