@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import client from "../../api/client"; 
+import client from "../../api/client";
+import endpoints from "../../api/endpoints";
 import './pos.css'; 
 import { Decimal } from "decimal.js"; 
 import ClientCreationModal from './ClientCreationModal';
@@ -58,7 +59,7 @@ function POS() {
         setError(null);
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            const productosRes = await client.get("/pos/api/productos/", config);
+            const productosRes = await client.get(endpoints.productos.list, config);
             const productosConNumeros = productosRes.data.map(p => ({
                 ...p,
                 precio_venta: new Decimal(p.precio_venta || 0),
@@ -66,7 +67,7 @@ function POS() {
             }));
             setProductos(productosConNumeros);
 
-            const categoriasRes = await client.get("/pos/api/categorias/", config);
+            const categoriasRes = await client.get(endpoints.categorias.list, config);
             setCategorias(categoriasRes.data);
             
         } catch (err) {
@@ -98,8 +99,7 @@ function POS() {
 
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            // Usamos GET /pos/api/clientes/{rut}/
-            const res = await client.get(`/pos/api/clientes/${rut}/`, config);
+            const res = await client.get(endpoints.clientes.detail(rut), config);
             
             setClienteSeleccionado(res.data);
             setRutCliente(res.data.rut); // Asegurar el formato correcto
@@ -233,7 +233,7 @@ function POS() {
 
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            await client.post("/pos/api/ventas/", ventaData, config); 
+            await client.post(endpoints.ventas.create, ventaData, config); 
             
             let msgExito = `¡Venta Registrada!\nTotal: ${formatCurrency(cartTotal)}`;
             if (vueltoTotalFinal.greaterThan(0)) {
@@ -269,8 +269,7 @@ function POS() {
 
     try {
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        // Endpoint de creación de clientes
-        const res = await client.post("/pos/api/clientes/", clientData, config); 
+        const res = await client.post(endpoints.clientes.create, clientData, config); 
         
         // Cliente creado exitosamente (res.data contiene el nuevo cliente)
         alert(`Cliente ${res.data.nombre} creado y seleccionado.`);

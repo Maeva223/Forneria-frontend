@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import client from "../../api/client";
+import endpoints from "../../api/endpoints";
 import Loader from "../../components/UI/Loader";
 import Pagination from "../../components/UI/Pagination"; // Asegúrate de que este componente exista
 import Badge from "../../components/UI/Badge";
@@ -45,7 +46,7 @@ export default function ClientesList() {
     try {
       const config = { headers: { Authorization: `Bearer ${authToken}` } };
       
-      const { data } = await client.get("/pos/api/clientes/", {
+      const { data } = await client.get(endpoints.clientes.list, {
         ...config,
         params: {
           page,
@@ -107,7 +108,7 @@ export default function ClientesList() {
     try {
       const config = { headers: { Authorization: `Bearer ${authToken}` } };
       // Se mantiene el endpoint original, asumiendo que el backend maneja el token.
-      const { data } = await client.get(`/pos/api/clientes/${rut}/`, config); 
+      const { data } = await client.get(endpoints.clientes.detail(rut), config); 
       setCompras(data.ventas || data.compras || []); // Ajustar si el campo es 'compras'
     } catch (err) {
       console.error("Error cargando compras:", err.response?.data || err.message);

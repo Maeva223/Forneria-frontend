@@ -19,6 +19,7 @@ import DetalleVenta from "../pages/Pedidos/DetalleVenta";
 // ------------------------------------------
 
 import DashboardFinanciero from "../pages/Dashboard/DashboardFinanciero";
+import DashboardInventario from "../pages/Dashboard/DashboardInventario";
 
 
 // Función de HOC para Rutas Privadas
@@ -197,25 +198,25 @@ export default function AppRouter() {
                 }
             />
 
-            {/* Configuración */}
+            {/* Dashboard Financiero */}
             <Route
-                path="/configuracion"
+                path="/dashboard/finanzas"
                 element={
                     <PrivateRoute>
                         <PrivateLayout>
-                            <Configuracion />
+                            <DashboardFinanciero />
                         </PrivateLayout>
                     </PrivateRoute>
                 }
             />
 
-            {/* Dashboard */}
+            {/* Dashboard Inventario */}
             <Route
-                path="/dashboard"
+                path="/dashboard/inventario"
                 element={
                     <PrivateRoute>
                         <PrivateLayout>
-                            <DashboardFinanciero />
+                            <DashboardInventario />
                         </PrivateLayout>
                     </PrivateRoute>
                 }

@@ -8,9 +8,20 @@ function NavbarApp() {
     const [empleado, setEmpleado] = useState(null);
 
     useEffect(() => {
+        // Cargar empleado inicial
         const rawEmpleado = localStorage.getItem("empleado");
         const datosEmpleado = rawEmpleado ? JSON.parse(rawEmpleado) : null;
         setEmpleado(datosEmpleado);
+
+        // Escuchar cambios en localStorage
+        const handleStorageChange = () => {
+            const rawEmpleado = localStorage.getItem("empleado");
+            const datosEmpleado = rawEmpleado ? JSON.parse(rawEmpleado) : null;
+            setEmpleado(datosEmpleado);
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const esAdministrador = empleado?.cargo === "Administrador";
@@ -20,9 +31,10 @@ function NavbarApp() {
         localStorage.removeItem("access");
         localStorage.removeItem("refresh");
         localStorage.removeItem("empleado");
+        localStorage.removeItem("user");
         setEmpleado(null); 
         // Redirige a la landing page (ruta raíz /)
-        navigate("/"); 
+        window.location.href = "/";
     }
 
     return (
@@ -48,24 +60,25 @@ function NavbarApp() {
                     <>
                         {esAdministrador ? (
                             <>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/dashboard">Dashboard</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/pos">Punto de venta</Link></li>  
-                                <li className="nav-item"><Link className="nav-link text-white" to="/ventas">Ventas</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/inventario">Inventario</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/pedidos">Pedidos</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/clientes">Clientes</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/reportes">Reportes</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/configuracion">Configuración</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/dashboard/finanzas">📊 Dashboard Financiero</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/dashboard/inventario">📦 Dashboard Inventario</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/pos">💰 Punto de venta</Link></li>  
+                                <li className="nav-item"><Link className="nav-link text-white" to="/ventas">🧾 Ventas</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/inventario">📋 Inventario</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/pedidos">🛒 Pedidos</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/clientes">👥 Clientes</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/reportes">📈 Reportes</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/configuracion">⚙️ Configuración</Link></li>
                             </>
                         ) : esVendedor ? (
                             <>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/pos">Punto de venta</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/pedidos">Pedidos</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/inventario">Inventario</Link></li>
-                                <li className="nav-item"><Link className="nav-link text-white" to="/ventas">Ventas</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/pos">💰 Punto de venta</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/pedidos">🛒 Pedidos</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/inventario">📋 Inventario</Link></li>
+                                <li className="nav-item"><Link className="nav-link text-white" to="/ventas">🧾 Ventas</Link></li>
                             </>
                         ) : (
-                            <li className="nav-item"><Link className="nav-link text-white" to="/pos">Punto de venta</Link></li>
+                            <li className="nav-item"><Link className="nav-link text-white" to="/pos">💰 Punto de venta</Link></li>
                         )}
                     </>
                 ) : (

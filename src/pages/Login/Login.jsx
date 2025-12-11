@@ -22,7 +22,8 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(form);
-      navigate("/pos"); // Redirige a la ruta principal (ej. Punto de Venta) al tener éxito
+      // Recargar la ventana para actualizar el navbar con el nuevo empleado
+      window.location.href = "/pos";
     } catch (err) {
       // Captura el mensaje de error de la respuesta o usa un mensaje genérico
       setError(err.response?.data?.detail || "Credenciales inválidas. Por favor, inténtelo de nuevo.");

@@ -63,7 +63,7 @@ export default function DetalleVenta() {
 
         try {
             // RUTA AJUSTADA: GET para un detalle específico
-            const { data } = await client.get(`/pos/api/ventas/${id}/`, config);
+            const { data } = await client.get(endpoints.ventas.detail(id), config);
             setVenta(data);
         } catch (err) {
             console.error(`Error al cargar Venta #${id}:`, err.response?.data || err);
@@ -82,7 +82,7 @@ export default function DetalleVenta() {
 
         try {
             // Solo enviamos el campo 'estado'
-            await client.patch(`/pos/api/ventas/${id}/`, { 
+            await client.patch(endpoints.ventas.detail(id), { 
                 estado: nuevoEstado 
             }, config);
             

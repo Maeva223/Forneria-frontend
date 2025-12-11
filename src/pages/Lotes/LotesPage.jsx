@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import client from "../../api/client";
+import endpoints from "../../api/endpoints";
 import Loader from "../../components/UI/Loader";
 import Table from "../../components/UI/Table";
 
@@ -23,7 +24,7 @@ export default function LotesPage() {
   async function loadLotes() {
     setLoading(true);
     try {
-      const { data } = await client.get(`/productos/${productoId}/lotes/`);
+      const { data } = await client.get(`/pos/productos/${productoId}/lotes/`);
       setProducto(data.producto);
       setLotes(data.lotes);
     } catch (err) {
@@ -43,7 +44,7 @@ export default function LotesPage() {
       if (selectedLote) {
         await client.put(`/lotes/${selectedLote.id}/`, form);
       } else {
-        await client.post(`/productos/${productoId}/lotes/`, form);
+        await client.post(`/pos/productos/${productoId}/lotes/`, form);
       }
       setMode("list");
       setSelectedLote(null);

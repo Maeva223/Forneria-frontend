@@ -1,54 +1,53 @@
 import client from "./client";
 
 export async function login({ username, password }) {
-    try {
-        // 1. POST para obtener tokens
-        console.log("Intentando login con:", username);
-        const tokenResponse = await client.post("/api/auth/login/", { username, password });
-        console.log("Token response:", tokenResponse.data);
-        
-        const { access, refresh, user } = tokenResponse.data;
-        
-        // Guardar tokens inmediatamente
-        localStorage.setItem("access", access);
-        localStorage.setItem("refresh", refresh);
+    
+    // 1. POST para obtener tokens - dj-rest-auth
+    const tokenResponse = await client.post("/api/auth/login/", { username, password });
+    
+    const { access, refresh, user } = tokenResponse.data;
+    
+    // Guardar tokens inmediatamente
+    localStorage.setItem("access", access);
+    localStorage.setItem("refresh", refresh);
 
-        // 2. GET para obtener datos del empleado con cargo
-        try {
-            console.log("Obteniendo datos del empleado...");
-            // Crear una nueva instancia de cliente con el token
-            const employeeResponse = await client.get("/pos/me/", {
-                headers: {
-                    'Authorization': `Bearer ${access}`
-                }
-            });
-            
-            const employeeData = employeeResponse.data;
-            console.log("Datos del empleado:", employeeData);
+    // 2. Guardar datos del usuario
+    localStorage.setItem("user", JSON.stringify(user));
 
-            // 3. Guardar el objeto COMPLETO del empleado bajo la clave 'empleado'
-            localStorage.setItem("empleado", JSON.stringify(employeeData)); 
-            
-            // Guardar el objeto 'user' original (opcional)
-            localStorage.setItem("user", JSON.stringify(user));
+    // 3. Configurar el header de autorización para futuras llamadas
+    client.defaults.headers.common['Authorization'] = `Bearer ${access}`;
 
-            return { ...tokenResponse.data, empleado: employeeData };
-        } catch (err) {
-            // Si falla obtener el empleado, usar los datos que tenemos
-            console.warn("No se pudo obtener datos del empleado:", err.response?.data || err.message);
-            localStorage.setItem("user", JSON.stringify(user));
-            return { ...tokenResponse.data, empleado: user };
-        }
-    } catch (error) {
-        console.error("Error en login:", error.response?.data || error.message);
-        throw error;
-    }
+    // 4. Mapear user a empleado para compatibilidad con el Navbar
+    // NOTA: Esto es temporal hasta que el backend tenga endpoint /pos/me/
+    
+    // Verificar si es superuser o staff de múltiples formas
+    const esAdmin = user.is_superuser === true || 
+                    user.is_staff === true || 
+                    user.username?.toLowerCase().startsWith('admin');
+    
+    const empleadoData = {
+        nombre_completo: user.username || "Usuario",
+        cargo: esAdmin ? "Administrador" : "Vendedor",
+        ...user
+    };
+    
+    console.log("=== DEBUG LOGIN ===");
+    console.log("Usuario autenticado:", user);
+    console.log("is_superuser:", user.is_superuser);
+    console.log("is_staff:", user.is_staff);
+    console.log("Es administrador:", esAdmin);
+    console.log("Cargo asignado:", empleadoData.cargo);
+    console.log("==================");
+    
+    localStorage.setItem("empleado", JSON.stringify(empleadoData));
+    
+    return tokenResponse.data;
 }
 
 export function logout() {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("user");
-    // Asegúrate de limpiar también la clave 'empleado'
-    localStorage.removeItem("empleado"); 
+    localStorage.removeItem("empleado");
+    delete client.defaults.headers.common['Authorization'];
 }

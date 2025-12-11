@@ -16,7 +16,7 @@ export default function ClienteDetail() {
   async function loadData() {
     setLoading(true);
     try {
-      const { data } = await client.get(`/pos/api/clientes/${rut}/`, { params: { page } });
+      const { data } = await client.get(endpoints.clientes.detail(rut), { params: { page } });
       setCliente(data.cliente);
       setVentas(data.ventas.results || data.ventas); // según cómo devuelvas la API
       setTotalPages(data.ventas.total_pages || 1);

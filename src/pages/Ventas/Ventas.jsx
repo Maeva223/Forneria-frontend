@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
 import client from "../../api/client";
+import endpoints from "../../api/endpoints";
 import Loader from "../../components/UI/Loader";
 
 // Helper para formato de moneda (se mantiene)
@@ -63,7 +64,7 @@ export default function Ventas() {
         };
 
         try {
-            const { data } = await client.get("/pos/api/ventas/", config);
+            const { data } = await client.get(endpoints.ventas.list, config);
             setVentas(data); 
 
         } catch (err) {
