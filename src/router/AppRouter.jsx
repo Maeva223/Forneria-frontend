@@ -13,6 +13,7 @@ import Inventario from "../pages/Inventarios/Inventario";
 import ProductoPage from "../pages/Inventarios/ProductoPage";
 import LotesPage from "../pages/Lotes/LotesPage";
 import Ventas from "../pages/Ventas/Ventas";
+import Configuracion from "../pages/Configuracion/Configuracion";
 import OrdenesActivas from "../pages/Pedidos/OrdenesActivas"; 
 import DetalleVenta from "../pages/Pedidos/DetalleVenta"; 
 // ------------------------------------------
@@ -191,6 +192,18 @@ export default function AppRouter() {
                     <PrivateRoute>
                         <PrivateLayout>
                             <Ventas />
+                        </PrivateLayout>
+                    </PrivateRoute>
+                }
+            />
+
+            {/* Configuración */}
+            <Route
+                path="/configuracion"
+                element={
+                    <PrivateRoute>
+                        <PrivateLayout>
+                            <Configuracion />
                         </PrivateLayout>
                     </PrivateRoute>
                 }
